@@ -86,3 +86,28 @@
 6. Dexcom Developer. Endpoint overview (API v2, вимога TLS 1.2): https://developer.dexcom.com/docs/dexcomv2/endpoint-overview
 7. Momentum. Dexcom API Integration: A Developer's Guide (стороннє джерело): https://themomentum.ai/blog/dexcom-api-integration-developer-guide
 8. FireUp. Healthcare startup software development (матеріали підрядника mySugr): https://fireup.pro/industries/healthcare-startup
+9. ## 1.4 Концептуальна модель To-Be
+
+Передбачено відокремлення прийому подій від їх обробки (CQRS). Клієнт надсилає подію (глюкоза, ХО, інсулін) на Ingestion API з ключем ідемпотентності; після валідації подія атомарно зберігається разом із записом outbox і публікується в Kafka. Споживачі формують окремі read-моделі: часові ряди в TimescaleDB та стан компаньйона в Redis. Нарахування XP і streak виконується ідемпотентним споживачем, запобігаючи подвійному нарахуванню.
+
+## 1.5 Функціональні вимоги (Core Features)
+
+**Модуль Ingestion**
+* Приймати та валідувати події показників через REST API з ключем ідемпотентності.
+* Публікувати події в Kafka за схемою transactional outbox із ключем партиціонування patientId.
+
+**Модуль Projection (CQRS read-side)**
+* Формувати read-моделі: часові ряди в TimescaleDB (continuous aggregates) та стан компаньйона в Redis.
+
+**Модуль Gamification**
+* Обчислювати XP, streak та Achievements із ідемпотентною обробкою подій.
+
+**Модуль BFF**
+* Віддавати клієнту дитини агрегований стан компаньйона та прогрес.
+* Надавати опікуну й лікарю метрики Time in Range, середнє значення, варіабельність та тренди за період.
+
+**Модуль Reminder**
+* Планувати та доставляти нагадування через push-канал з ескалацією опікуну при пропуску.
+
+**Модуль Auth & Audit**
+* Автентифікувати користувачів (OAuth 2.0/OIDC, JWT), застосовувати RBAC/ABAC та реєструвати кожен доступ до медичних даних в аудит-журналі.
